@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from "react";
 import { ParticipantInfo } from "@/types";
 import { ModelPanel } from "./model-panel";
 import { MessageInput } from "@/components/chat/message-input";
+import { addMessage, updateConversationTitle } from "@/lib/storage";
 
 interface ModelState {
   messages: { role: "user" | "assistant"; content: string }[];
@@ -67,16 +68,20 @@ export function IndependentView({
 
   const handleSend = useCallback(
     async (message: string) => {
-      // Save user message to DB
-      await fetch("/api/conversations/" + conversationId + "/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationId,
-          role: "user",
-          content: message,
-        }),
-      }).catch(() => {});
+      // Save user message to localStorage
+      addMessage(conversationId, {
+        conversationId,
+        participantId: null,
+        role: "user",
+        content: message,
+        modelId: null,
+        roundNumber: null,
+      });
+
+      // Auto-generate title from first message
+      if (!modelStates[participants[0]?.id]?.messages.length) {
+        updateConversationTitle(conversationId, message.slice(0, 50) + (message.length > 50 ? "..." : ""));
+      }
 
       // Add user message to all model states
       setModelStates((prev) => {
@@ -177,6 +182,16 @@ export function IndependentView({
           }
         }
       }
+
+      // Save assistant message to localStorage
+      addMessage(convId, {
+        conversationId: convId,
+        participantId: participant.id,
+        role: "assistant",
+        content: accumulated,
+        modelId: participant.modelId,
+        roundNumber: null,
+      });
 
       // Finalize
       setModelStates((prev) => ({

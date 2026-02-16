@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ModelSelector } from "@/components/model-selector/model-selector";
 import { ConversationMode } from "@/types";
+import { createConversation } from "@/lib/storage";
 
 const MODES: {
   value: ConversationMode;
@@ -53,7 +54,7 @@ export default function HomePage() {
     setShowModelSelector(true);
   };
 
-  const handleModelsConfirm = async (
+  const handleModelsConfirm = (
     models: {
       modelId: string;
       displayName: string;
@@ -62,27 +63,18 @@ export default function HomePage() {
   ) => {
     if (!selectedMode) return;
 
-    try {
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: selectedMode,
-          participants: models.map((m, i) => ({
-            modelId: m.modelId,
-            displayName: m.displayName,
-            role: m.role,
-            orderIndex: i,
-          })),
-        }),
-      });
+    const conversation = createConversation(
+      selectedMode,
+      models.map((m, i) => ({
+        modelId: m.modelId,
+        displayName: m.displayName,
+        role: m.role,
+        orderIndex: i,
+      }))
+    );
 
-      const conversation = await res.json();
-      setShowModelSelector(false);
-      router.push(`/chat/${conversation.id}`);
-    } catch (error) {
-      console.error("Failed to create conversation:", error);
-    }
+    setShowModelSelector(false);
+    router.push(`/chat/${conversation.id}`);
   };
 
   return (

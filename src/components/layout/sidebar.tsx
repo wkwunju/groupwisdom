@@ -6,44 +6,27 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-
-interface ConversationSummary {
-  id: string;
-  title: string;
-  mode: string;
-  updatedAt: string;
-  participants: { displayName: string }[];
-}
+import { listConversations, deleteConversation } from "@/lib/storage";
+import { ConversationWithDetails } from "@/types";
 
 interface SidebarProps {
   onNavigate?: () => void;
 }
 
 export function Sidebar({ onNavigate }: SidebarProps = {}) {
-  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
-  const fetchConversations = async () => {
-    try {
-      const res = await fetch("/api/conversations");
-      const data = await res.json();
-      setConversations(data);
-    } catch {
-      // Silent fail
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchConversations();
+    setConversations(listConversations());
+    setIsLoading(false);
   }, [pathname]);
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+    deleteConversation(id);
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (pathname === `/chat/${id}`) {
       router.push("/");

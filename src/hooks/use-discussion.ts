@@ -6,6 +6,7 @@ import {
   ParticipantInfo,
   DiscussionEvent,
 } from "@/types";
+import { addMessage, updateConversationTitle } from "@/lib/storage";
 
 interface DiscussionState {
   messages: MessageInfo[];
@@ -38,6 +39,19 @@ export function useDiscussion() {
       maxRounds: number
     ) => {
       abortRef.current = new AbortController();
+
+      // Save user message to localStorage
+      addMessage(conversationId, {
+        conversationId,
+        participantId: null,
+        role: "user",
+        content: userMessage,
+        modelId: null,
+        roundNumber: null,
+      });
+
+      // Auto-generate title from first message
+      updateConversationTitle(conversationId, userMessage.slice(0, 50) + (userMessage.length > 50 ? "..." : ""));
 
       // Add user message to local state
       setState((prev) => ({
@@ -141,6 +155,16 @@ export function useDiscussion() {
           break;
 
         case "turn_end":
+          // Save to localStorage
+          addMessage(conversationId, {
+            conversationId,
+            participantId: event.participantId,
+            role: "assistant",
+            content: event.fullContent,
+            modelId: null,
+            roundNumber: event.round,
+          });
+
           setState((prev) => ({
             ...prev,
             messages: [

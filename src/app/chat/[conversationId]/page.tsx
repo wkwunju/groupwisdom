@@ -1,43 +1,39 @@
-import { prisma } from "@/lib/db";
-import { notFound } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { getConversation } from "@/lib/storage";
+import { ConversationWithDetails } from "@/types";
 import { ConversationClient } from "./conversation-client";
 
-interface Props {
-  params: Promise<{ conversationId: string }>;
-}
+export default function ConversationPage() {
+  const params = useParams();
+  const router = useRouter();
+  const conversationId = params.conversationId as string;
+  const [conversation, setConversation] = useState<ConversationWithDetails | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
-export default async function ConversationPage({ params }: Props) {
-  const { conversationId } = await params;
+  useEffect(() => {
+    const conv = getConversation(conversationId);
+    if (conv) {
+      setConversation(conv);
+    } else {
+      setNotFound(true);
+    }
+  }, [conversationId]);
 
-  const conversation = await prisma.conversation.findUnique({
-    where: { id: conversationId },
-    include: {
-      participants: { orderBy: { orderIndex: "asc" } },
-      messages: { orderBy: { createdAt: "asc" } },
-    },
-  });
-
-  if (!conversation) {
-    notFound();
+  if (notFound) {
+    router.push("/");
+    return null;
   }
 
-  return (
-    <ConversationClient
-      conversation={{
-        ...conversation,
-        mode: conversation.mode as "independent" | "round_robin" | "moderated",
-        createdAt: conversation.createdAt,
-        updatedAt: conversation.updatedAt,
-        participants: conversation.participants.map((p: { id: string; conversationId: string; modelId: string; displayName: string; role: string; orderIndex: number }) => ({
-          ...p,
-          role: p.role as "participant" | "moderator" | "user",
-        })),
-        messages: conversation.messages.map((m: { id: string; conversationId: string; participantId: string | null; role: string; content: string; modelId: string | null; roundNumber: number | null; createdAt: Date }) => ({
-          ...m,
-          role: m.role as "user" | "assistant" | "system",
-          createdAt: m.createdAt,
-        })),
-      }}
-    />
-  );
+  if (!conversation) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-sm text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  return <ConversationClient conversation={conversation} />;
 }

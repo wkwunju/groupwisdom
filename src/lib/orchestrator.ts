@@ -1,4 +1,3 @@
-import { prisma } from "./db";
 import { streamOpenRouterResponse, parseSSEStream } from "./openrouter";
 import { buildParticipantPrompt, buildModeratorPrompt } from "./prompts";
 import { ParticipantInfo, DiscussionEvent } from "@/types";
@@ -17,15 +16,6 @@ export async function* orchestrateDiscussion(
 ): AsyncGenerator<DiscussionEvent> {
   const { conversationId, userMessage, mode, participants, maxRounds, signal } =
     options;
-
-  // Save user message
-  await prisma.message.create({
-    data: {
-      conversationId,
-      role: "user",
-      content: userMessage,
-    },
-  });
 
   // Build conversation history with speaker labels
   const conversationHistory: { role: string; content: string }[] = [
@@ -105,24 +95,12 @@ async function* roundRobinDiscussion(
         content: `[${participant.displayName}]: ${fullContent}`,
       });
 
-      // Save to database
-      const message = await prisma.message.create({
-        data: {
-          conversationId,
-          participantId: participant.id,
-          role: "assistant",
-          content: fullContent,
-          modelId: participant.modelId,
-          roundNumber: round,
-        },
-      });
-
       yield {
         type: "turn_end",
         participantId: participant.id,
         fullContent,
         round,
-        messageId: message.id,
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       };
     }
   }
@@ -176,23 +154,12 @@ async function* moderatedDiscussion(
       content: `[Moderator - ${moderator.displayName}]: ${content}`,
     });
 
-    const message = await prisma.message.create({
-      data: {
-        conversationId,
-        participantId: moderator.id,
-        role: "assistant",
-        content,
-        modelId: moderator.modelId,
-        roundNumber: 0,
-      },
-    });
-
     yield {
       type: "turn_end",
       participantId: moderator.id,
       fullContent: content,
       round: 0,
-      messageId: message.id,
+      messageId: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     };
   }
 
@@ -230,23 +197,12 @@ async function* moderatedDiscussion(
         content: `[Moderator - ${moderator.displayName}]: ${content}`,
       });
 
-      const message = await prisma.message.create({
-        data: {
-          conversationId,
-          participantId: moderator.id,
-          role: "assistant",
-          content,
-          modelId: moderator.modelId,
-          roundNumber: round,
-        },
-      });
-
       yield {
         type: "turn_end",
         participantId: moderator.id,
         fullContent: content,
         round,
-        messageId: message.id,
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       };
     }
 
@@ -288,23 +244,12 @@ async function* moderatedDiscussion(
         content: `[${participant.displayName}]: ${content}`,
       });
 
-      const message = await prisma.message.create({
-        data: {
-          conversationId,
-          participantId: participant.id,
-          role: "assistant",
-          content,
-          modelId: participant.modelId,
-          roundNumber: round,
-        },
-      });
-
       yield {
         type: "turn_end",
         participantId: participant.id,
         fullContent: content,
         round,
-        messageId: message.id,
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       };
     }
 
@@ -338,23 +283,12 @@ async function* moderatedDiscussion(
         content: `[Moderator - ${moderator.displayName}]: ${content}`,
       });
 
-      const message = await prisma.message.create({
-        data: {
-          conversationId,
-          participantId: moderator.id,
-          role: "assistant",
-          content,
-          modelId: moderator.modelId,
-          roundNumber: round,
-        },
-      });
-
       yield {
         type: "turn_end",
         participantId: moderator.id,
         fullContent: content,
         round,
-        messageId: message.id,
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       };
     }
   }
@@ -383,23 +317,12 @@ async function* moderatedDiscussion(
       signal
     );
 
-    const message = await prisma.message.create({
-      data: {
-        conversationId,
-        participantId: moderator.id,
-        role: "assistant",
-        content,
-        modelId: moderator.modelId,
-        roundNumber: maxRounds,
-      },
-    });
-
     yield {
       type: "turn_end",
       participantId: moderator.id,
       fullContent: content,
       round: maxRounds,
-      messageId: message.id,
+      messageId: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     };
   }
 }
